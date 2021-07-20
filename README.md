@@ -1,12 +1,12 @@
 # inference_helper
 
-When we perform inference with an OAK-D camera, the most efficient way is to set up everything into a DepthAI pipeline. This can minimize data transfers between the device and host and obtain the best inference speed from the 2 NN accelerators. However, occasionally it is not possible to set up everything in a pipeline. For example: customized image preprocessing, multi-stage NN inference with result processing in-between stages. In such cases, the typical usage of the DepthAI pipeline becomes a manual process and is demonstrated in the diagram below. 
+When we perform inference with an OAK-D camera, the most efficient way is to set up everything into a DepthAI pipeline. This can minimize data transfers between the device and host and obtain the best inference speed from the 2 built in NCEs. However, occasionally it is not possible to set up everything in a pipeline. For example: customized image preprocessing, multi-stage NN inference with result processing in-between stages. In such cases, the typical usage of the DepthAI pipeline becomes a manual process and is demonstrated in the diagram below. 
 
 <img src="images/typical_pipeline.png" width="100%">
 
 From the diagram above, we can calculate the total latency of one frame is ```(x + y + z) ms```. This is a sequential process with some I/O tasks mix with computational tasks, and there is clearly room for improvement. By designing a packing mechanism for these three components, we can reduce the overall latency.
 
-Besides, we also noticed that the inference time ```y``` isnt't optimal in this manual process. In fact, for the same model, the inference speed in manual mode is slower than that in pipeline mode (i.e. when everything is set up into a DepthAI pipeline). We speculated that the reason for this is when we perform inference frame by frame in this way, there is only 1 NN accelerator being used all the time. Therefore we are only utilizing 50% of OAK-D's neural inference capability. If we can pass in multiple frames to the NN node simultaneously, we can use all NN accelerators. 
+Also, we know that the inference time ```y``` isn't optimal in this manual process. In fact, for the same model, the inference speed in manual mode is slower than that in pipeline mode (i.e. when everything is set up into a DepthAI pipeline). We speculated that the reason for this is when we perform inference frame by frame in this way, there is only 1 NN accelerator being used all the time. Therefore we are only utilizing 50% of OAK-D's neural inference capability. If we can pass in multiple frames to the NN node simultaneously, we can use all NN accelerators. 
 
 With these two goals in mind, we derived the following packing mechanism:
 
