@@ -6,33 +6,29 @@ When we perform inference with an OAK-D camera, the most efficient way is to set
 
 From the diagram above, we can calculate the total latency of one frame is ```(x + y + z) ms```. This is a sequential process with some I/O tasks mix with computational tasks, and there is clearly room for improvement. By designing a packing mechanism for these three components, we can reduce the overall latency.
 
-Also, we know that the inference time ```y``` isn't optimal in this manual process. In fact, for the same model, the inference speed in manual mode is slower than that in pipeline mode (i.e. when everything is set up into a DepthAI pipeline). We speculated that the reason for this is when we perform inference frame by frame in this way, there is only 1 NN accelerator being used all the time. Therefore we are only utilizing 50% of OAK-D's neural inference capability. If we can pass in multiple frames to the NN node simultaneously, we can use all NN accelerators. 
-
-With these two goals in mind, we derived the following packing mechanism:
-
-<img src="images/new_packing.png" width="100%">
+Also, we know that the inference time ```y``` isn't optimal in this manual process. In fact, for the same model, the inference speed in manual mode is slower than that in pipeline mode (i.e. when everything is set up into a DepthAI pipeline). We tried to pass in multiple frames to the NN node simultaneously and we observed an increase in the inference speed. For example, when we passed in one frame to the NN node (using the model provided in this project), the inferenece time was measured to be ~50ms. However, when we passed in four frames to the NN node simultaneously, the total inference time was also ~95ms, which indicated a single frame inference only took ~25ms, approximately half of the original speed. 
 
 The key is to introduce a short delay by locking the frame rate to the slowest component in the inference process and making sure both the frame-grabbing component and result displaying component can finish in the same amount of time. With this structure, the total latency of this process is only the time it takes for the slowest component to complete. The diagram below shows the comparison in inference time between this packing mechanism to the sequential mechanism.
 
 <img src="images/packing_comparing.png" width="100%">
 
-Furthermore, with the packing mechanism, we can use it to grab and infer an arbitrary number of frames simultaneously, which helps to utilize the 2 NN accelerators in the OAK-D camera. The diagram below demonstrates this process.
+Furthermore, with the packing mechanism, we can use it to grab and infer an arbitrary number of frames simultaneously, such that we can benefit from the increased inference speed behaviour we observed.
 
-<img src="images/new_packing_multi_frames.png" width="100%">
 
 ## Testing results
 
 Using [this example](https://docs.luxonis.com/projects/api/en/latest/samples/video_mobilenet/) as baseline, we compared the average FPS before and after using our packing mechanism. The original script of this example is mostly unchanged except:
 1. A resize step is added after reading in the video frame.
 2. A time measurement is added to get the overall FPS.
+
 You can find this script in the project's root folder with name ```video_mobilenet.py```
 
-This comparison was run on a Raspberry Pi 4 and a Macbook Pro 16' with a 2.3 GHz 8-Core Intel Core i9 processor. The results are presented in the table below.
+This comparison was run on a Raspberry Pi 4 and a Macbook Pro 16" with a 2.3 GHz 8-Core Intel Core i9 processor. The results are presented in the table below.
 
 |  | Before packing | 1 frame | 2 frames | 4 frames |
 |:--:|:--:|:--:|:--:|:--:|
-| Raspberry Pi 4 | 12 FPS | 17 FPS | 20 FPS | 20 FPS |
-| Macbook pro 16'| 17 FPS | 24 FPS | 26 FPS | 25 FPS |
+| Raspberry Pi 4 + OAK-D camera | 12 FPS | 17 FPS | 20 FPS | 20 FPS |
+| Macbook pro 16" + OAK-D camera | 17 FPS | 24 FPS | 26 FPS | 25 FPS |
 
 ## Usage
 
